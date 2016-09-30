@@ -1,6 +1,7 @@
 var loopback = require('loopback'),
-    debug = require('debug')('openframe:model:OpenframeUser'),
-    addLikedToReq = require('../../helpers').addLikedToReq;
+    path = require('path'),
+    debug = require('debug')('openframe:model:OpenframeUser');
+
 
 module.exports = function(OpenframeUser) {
 
@@ -44,42 +45,48 @@ module.exports = function(OpenframeUser) {
     OpenframeUser.disableRemoteMethod('__get__identities', false);
     OpenframeUser.disableRemoteMethod('__updateById__identities', false);
 
+    OpenframeUser.afterRemote('create', function(context, OpenframeUserInstance, next) {
+        debug('> OpenframeUser.afterRemote triggered');
 
-    // HACK: add array of liked artworks to request so that it's available in the 'loaded' hook
-    // for artwork objects.
-    OpenframeUser.beforeRemote('prototype.primary_collection', addLikedToReq);
+        var options = {
+            type: 'email',
+            to: OpenframeUserInstance.email,
+            from: 'Openframe <noreply@openframe.io>',
+            subject: 'Welcome to Openframe!',
+            template: path.resolve(__dirname, '../../server/views/email-templates/verify.ejs'),
+            redirect: OpenframeUser.app.get('webapp_base_url') + '/verified',
+            OpenframeUser: OpenframeUser
+        };
 
-    /**
-     * On artwork create, add to the current user's primary collection.
-     */
-    OpenframeUser.afterRemote('prototype.__create__owned_artwork', function(ctx, modelInstance, next) {
-        debug('afterRemote prototype.__create__owned_artwork', modelInstance);
-        var req = ctx.req,
-            user = req.user,
-            artwork = ctx.result;
+        OpenframeUserInstance.verify(options, function(err, response) {
+            if (err) return next(err);
 
-        // this shouldn't happen since auth is required to create artwork
-        if (!user) {
-            return next();
-        }
+            debug('> verification email sent:', response);
 
-        if (artwork) {
-            user.primary_collection(function(err, collection) {
-                if (collection) {
-                    collection.artwork.add(artwork, function(err) {
-                        if (err) {
-                            next(err);
-                        } else {
-                            next();
-                        }
-                    });
-                } else {
-                    next();
-                }
-            });
-        } else {
-            next();
-        }
+            context.res.send(JSON.stringify({
+                success: true
+            }));
+        });
+    });
+
+
+    OpenframeUser.on('resetPasswordRequest', function(info) {
+        debug(info.email); // the email of the requested user
+        debug(info.accessToken.id); // the temp access token to allow password reset
+        var url = OpenframeUser.app.get('webapp_base_url') + '/reset-password/' + info.accessToken.id;
+        var renderer = loopback.template(path.resolve(__dirname, '../../server/views/email-templates/reset-password.ejs'));
+        var html_body = renderer({
+            reset_link: url
+        });
+        OpenframeUser.app.models.Email.send({
+            to: info.email,
+            from: 'Openframe <noreply@openframe.io>',
+            subject: 'Openframe password reset',
+            html: html_body
+        }, function(err) {
+            if (err) return debug('> error sending password reset email');
+            debug('> sending password reset email to:', info.email);
+        });
     });
 
 
@@ -120,10 +127,22 @@ module.exports = function(OpenframeUser) {
     OpenframeUser.prototype.all_frames = function(cb) {
         var self = this,
             allFrames;
-        self.owned_frames({include: ['managers', 'current_artwork']},function(err, _ownFrames) {
+        self.owned_frames({
+            include: [
+                'managers',
+                'current_artwork',
+                'owner'
+                // {
+                //     relation: 'owner', // include the owner object
+                //     scope: { // further filter the owner object
+                //         fields: ['username', 'email', 'id']
+                //     }
+                // }
+            ]
+        }, function(err, _ownFrames) {
             var ownFrames = _ownFrames || [];
             self.managed_frames({
-                include: 'current_artwork',
+                include: ['managers', 'current_artwork', 'owner'],
                 where: {
                     ownerId: {
                         neq: self.id
@@ -161,8 +180,8 @@ module.exports = function(OpenframeUser) {
     OpenframeUser.prototype.toJSON = function() {
         // TODO: this seems awfully fragile... not very clear when context is available
         var ctx = loopback.getCurrentContext(),
-            token = ctx.active.http.req.accessToken,
-            userId = token ? token.userId : null,
+            user = ctx.get('currentUser'),
+            userId = user && user.id,
             obj = this.toObject(false, true, false);
 
         debug('USER toJSON', userId, obj);
@@ -173,7 +192,4 @@ module.exports = function(OpenframeUser) {
 
         return obj;
     };
-
-
-
 };

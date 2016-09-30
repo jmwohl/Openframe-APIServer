@@ -7,3 +7,5 @@ coverage/*
 .env
 # server/boot/create-sample-data.js
 server/boot/create-admin-user.js
+*.bak
+dump/*

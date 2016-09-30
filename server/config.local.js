@@ -26,6 +26,9 @@ module.exports = {
             'disableStackTrace': false
         }
     },
+    'webapp_protocol': process.env.WEBAPP_PROTOCOL || 'http',
+    'webapp_host': process.env.WEBAPP_HOST || 'localhost',
+    'webapp_port': process.env.WEBAPP_PORT || null,
     'pubsub_protocol': process.env.PS_PROTOCOL || 'http',
     'pubsub_host': process.env.PS_HOST || '0.0.0.0',
     'pubsub_port': process.env.PS_PORT || 8889,

@@ -10,6 +10,7 @@
     "Timestamp": {}
   },
   "scope": {
+    "order": "created",
     "include": {
       "current_artwork": true,
       "managers": true,

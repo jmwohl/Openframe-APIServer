@@ -10,10 +10,7 @@
     "Timestamp": {},
     "IsPublicOrOwner": {}
   },
-  "scope": {
-    "order": "created DESC",
-    "limit": 100
-  },
+  "scope": {},
   "properties": {
     "title": {
       "type": "string",

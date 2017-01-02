@@ -14,6 +14,15 @@ module.exports = function(app) {
 
     // TODO: Implement these...
 
+    app.get('/hub', function(req, res, next) {
+        res.render('hub');
+    });
+
+    // Render login page
+    app.get('/login', function(req, res, next) {
+        return res.render('login-popup');
+    });
+
     //show password reset form
     // app.get('/reset-password', function(req, res, next) {
     //     if (!req.accessToken) return res.sendStatus(401);

@@ -18,7 +18,6 @@
                 <img alt="Brand" src="/img/of-logo.svg">
 
             </a>
-            <h2>/&nbsp;login<h2>
         </div>
     </nav>
     <div class="container container-centered-form container-login">
@@ -55,12 +54,13 @@
     </div>
 
     <% include includes/js-libs %>
-    <script type="text/javascript" src='/js/ofsdk.js'></script>
+    <script type="text/javascript" src='/js/OF.js'></script>
+    <script type="text/javascript" src='/js/OF.API.js'></script>
     <script type="text/javascript">
         $('#LoginButton').on('click', function(e) {
             console.log('clicked');
             e.preventDefault();
-            OF.login($('#Username').val(), $('#Password').val())
+            OF.API.login($('#Username').val(), $('#Password').val())
                 .success(function(resp) {
                     window.opener.postMessage('success', '*');
                     window.close();
